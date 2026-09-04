@@ -14,8 +14,8 @@ jobs:
     outputs:
       toolchain_ver: ${{ steps.upstream.outputs.toolchain_ver }}
       toolchain_date: ${{ steps.upstream.outputs.toolchain_date }}
-      tag: ${{ steps.upstream.outputs.toolchain_ver }}.${{ steps.upstream.outputs.toolchain_date }}-1
-      is_new: ${{ steps.compare.outputs.is_new }}
+      tag: ${{ steps.upstream.outputs.tag }}
+      is_new: ${{ steps.exists.outputs.is_new }}
     steps:
       # ARM's own download page has no queryable "latest release" API (it now
       # redirects to a GitLab project with no tags/releases published). The
@@ -30,21 +30,19 @@ jobs:
           source PKGBUILD
           echo "toolchain_ver=$_pkgver" >> "$GITHUB_OUTPUT"
           echo "toolchain_date=$_pkgdate" >> "$GITHUB_OUTPUT"
+          echo "tag=${_pkgver}.${_pkgdate}-1" >> "$GITHUB_OUTPUT"
 
-      - name: Read our own currently-committed version
-        id: current
+      # Idempotency via "does a release for this tag already exist" (same
+      # technique as aur-bin-chicken), not "does our committed PKGBUILD
+      # already match upstream" - the latter false-positives on the very
+      # first run whenever the PKGBUILD happens to be pre-filled with
+      # whatever the current version already was.
+      - name: Check whether this version is already released
+        id: exists
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git clone --depth 1 "https://github.com/${{ github.repository }}.git" own-repo
-          cd own-repo
-          source PKGBUILD
-          echo "toolchain_ver=$_toolchain_ver" >> "$GITHUB_OUTPUT"
-          echo "toolchain_date=$_toolchain_date" >> "$GITHUB_OUTPUT"
-
-      - name: Compare
-        id: compare
-        run: |
-          if [ "${{ steps.upstream.outputs.toolchain_ver }}" = "${{ steps.current.outputs.toolchain_ver }}" ] && \
-             [ "${{ steps.upstream.outputs.toolchain_date }}" = "${{ steps.current.outputs.toolchain_date }}" ]; then
+          if gh release view "${{ steps.upstream.outputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             echo "is_new=false" >> "$GITHUB_OUTPUT"
           else
             echo "is_new=true" >> "$GITHUB_OUTPUT"
