@@ -154,7 +154,11 @@ jobs:
           for f in PKGBUILD .SRCINFO .gitignore; do
             git checkout master -- "$f" 2>/dev/null || true
           done
-          git add -A
+          # Explicit add, not -A: this repo also has the downloaded
+          # toolchain tarball (128MB) and makepkg build output sitting in
+          # the same directory - a blanket `git add -A` would try to commit
+          # those too, and GitHub flatly rejects anything over 100MB.
+          git add PKGBUILD .SRCINFO .gitignore
           if ! git diff --cached --quiet; then
             git commit -m "${{ needs.check.outputs.tag }}"
             git push origin aur
