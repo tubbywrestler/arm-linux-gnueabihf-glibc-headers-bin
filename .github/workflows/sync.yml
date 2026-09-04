@@ -78,11 +78,17 @@ jobs:
           NEW_VER: ${{ needs.check.outputs.toolchain_ver }}
           NEW_DATE: ${{ needs.check.outputs.toolchain_date }}
         run: |
-          chown -R builder:builder bin-repo
           cd bin-repo
           sed -i "s/^_toolchain_ver=.*/_toolchain_ver=${NEW_VER}/" PKGBUILD
           sed -i "s/^_toolchain_date=.*/_toolchain_date=${NEW_DATE}/" PKGBUILD
           sed -i "s/^sha256sums=.*/sha256sums=('SKIP')/" PKGBUILD
+          # makepkg needs write access to the directory (for src/, pkg/, the
+          # built package) plus PKGBUILD/.SRCINFO. Use chmod, not chown -R -
+          # changing ownership of the worktree top-level directory makes git
+          # treat it as "dubious ownership" and refuse the next (root) step's
+          # plain git commands with the confusingly-unrelated error
+          # "fatal: not in a git directory".
+          chmod o+w . PKGBUILD .SRCINFO
           # --nodeps: sibling toolchain packages (binutils/glibc/glibc-headers)
           # aren't installed in this container - this is a packaging sanity
           # check (does our split/package() still work against this release),
