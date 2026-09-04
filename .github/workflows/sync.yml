@@ -103,14 +103,19 @@ jobs:
           curl -fL --retry 5 --retry-delay 3 -o "$_tarball_name" \
             "https://developer.arm.com/-/media/Files/downloads/gnu/${NEW_VER}/binrel/${_tarball_name}"
           chmod o+w "$_tarball_name"
+          # Hash the actual downloaded source tarball here, before building -
+          # sha256sums=() belongs to source=(), not to makepkg's build output.
+          # (Previously this hashed the built .pkg.tar.zst by mistake, which
+          # differs every run since it embeds a build timestamp - misread as
+          # download corruption before the real bug was found.)
+          sha=$(sha256sum "$_tarball_name" | awk '{print $1}')
+          sed -i "s/^sha256sums=.*/sha256sums=('${sha}')/" PKGBUILD
           # --nodeps: sibling toolchain packages (binutils/glibc/glibc-headers)
           # aren't installed in this container - this is a packaging sanity
           # check (does our split/package() still work against this release),
-          # not a full dependency-satisfied build.
+          # not a full dependency-satisfied build. makepkg will also now
+          # validate the checksum we just wrote, as a bonus sanity check.
           su builder -c "makepkg --nodeps"
-          artifact=$(ls *.pkg.tar.zst | grep -v -- '-debug-' | head -n1)
-          sha=$(sha256sum "$artifact" | awk '{print $1}')
-          sed -i "s/^sha256sums=.*/sha256sums=('${sha}')/" PKGBUILD
           su builder -c "makepkg --printsrcinfo > .SRCINFO"
 
       - name: Publish release (changelog/visibility only - not used for idempotency)
