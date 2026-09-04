@@ -89,6 +89,20 @@ jobs:
           # plain git commands with the confusingly-unrelated error
           # "fatal: not in a git directory".
           chmod o+w . PKGBUILD .SRCINFO
+          # Pre-download the tarball ourselves rather than letting makepkg's
+          # own downloader (curl ... -C - --retry 3) fetch it: -C - (resume)
+          # combined with a retry after a transient mid-transfer network
+          # hiccup can silently produce a corrupted file with no error if the
+          # retry lands on a different CDN edge - confirmed by hand (repeated
+          # plain `curl -fL` downloads of this same URL were always
+          # byte-identical; every makepkg-driven download of it was not).
+          # makepkg looks for an already-present source file next to the
+          # PKGBUILD before trying to download anything, so this is skipped
+          # entirely once the file is here.
+          _tarball_name="arm-gnu-toolchain-${NEW_VER}-x86_64-arm-none-linux-gnueabihf.tar.xz"
+          curl -fL --retry 5 --retry-delay 3 -o "$_tarball_name" \
+            "https://developer.arm.com/-/media/Files/downloads/gnu/${NEW_VER}/binrel/${_tarball_name}"
+          chmod o+w "$_tarball_name"
           # --nodeps: sibling toolchain packages (binutils/glibc/glibc-headers)
           # aren't installed in this container - this is a packaging sanity
           # check (does our split/package() still work against this release),
