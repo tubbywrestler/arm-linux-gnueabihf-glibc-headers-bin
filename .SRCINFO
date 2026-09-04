@@ -10,6 +10,6 @@ pkgbase = arm-linux-gnueabihf-glibc-headers-bin
 	options = !debug
 	options = !strip
 	source = https://developer.arm.com/-/media/Files/downloads/gnu/15.2.rel1/binrel/arm-gnu-toolchain-15.2.rel1-x86_64-arm-none-linux-gnueabihf.tar.xz
-	sha256sums = 0dd180fa2f190d40fd0bf61a4a820ec830f821db8c9dc61f0e51b8c5e99a2b8e
+	sha256sums = 1b0688cb8866aa785fbd8396aadc98a50c11eead6085461e2b20e000ad2bcf25
 
 pkgname = arm-linux-gnueabihf-glibc-headers-bin
